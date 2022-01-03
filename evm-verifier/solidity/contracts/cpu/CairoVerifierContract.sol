@@ -2,11 +2,7 @@
 pragma solidity ^0.6.11;
 
 abstract contract CairoVerifierContract {
-    function verifyProofExternal(
-        uint256[] calldata proofParams,
-        uint256[] calldata proof,
-        uint256[] calldata publicInput
-    ) external virtual;
+    function verifyProofExternal(uint256[] calldata proofParams, uint256[] calldata proof, uint256[] calldata publicInput) external virtual;
 
     /*
       Returns information that is related to the layout.
@@ -14,11 +10,7 @@ abstract contract CairoVerifierContract {
       publicMemoryOffset is the offset of the public memory pages' information in the public input.
       selectedBuiltins is a bit-map of builtins that are present in the layout.
     */
-    function getLayoutInfo()
-        external
-        pure
-        virtual
-        returns (uint256 publicMemoryOffset, uint256 selectedBuiltins);
+    function getLayoutInfo() external pure virtual returns (uint256 publicMemoryOffset, uint256 selectedBuiltins);
 
     uint256 internal constant OUTPUT_BUILTIN_BIT = 0;
     uint256 internal constant PEDERSEN_BUILTIN_BIT = 1;
@@ -26,3 +18,5 @@ abstract contract CairoVerifierContract {
     uint256 internal constant ECDSA_BUILTIN_BIT = 3;
     uint256 internal constant BITWISE_BUILTIN_BIT = 4;
 }
+
+

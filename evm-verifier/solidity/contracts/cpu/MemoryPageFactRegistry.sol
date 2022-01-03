@@ -14,10 +14,8 @@ contract MemoryPageFactRegistryConstants {
 
 /*
   A fact registry for the claim:
-    I know n pairs (addr, value) for which the hash of the pairs is memoryHash, and the cumulative
-    product: \prod_i( z - (addr_i + alpha * value_i) ) is prod.
-  The exact format of the hash depends on the type of the page
-  (see MemoryPageFactRegistryConstants).
+    I know n pairs (addr, value) for which the hash of the pairs is memoryHash, and the cumulative product: \prod_i( z - (addr_i + alpha * value_i) ) is prod.
+  The exact format of the hash depends on the type of the page (see MemoryPageFactRegistryConstants).
   The fact consists of (pageType, prime, n, z, alpha, prod, memoryHash, address).
   Note that address is only available for CONTINUOUS_PAGE, and otherwise it is 0.
 */
@@ -28,94 +26,39 @@ contract MemoryPageFactRegistry is FactRegistry, MemoryPageFactRegistryConstants
     /*
       Registers a fact based of the given memory (address, value) pairs (REGULAR_PAGE).
     */
-    function registerRegularMemoryPage(
-        uint256[] calldata memoryPairs,
-        uint256 z,
-        uint256 alpha,
-        uint256 prime
-    )
-        external
-        returns (
-            bytes32 factHash,
-            uint256 memoryHash,
-            uint256 prod
-        )
-    {
-        require(memoryPairs.length < 2**20, "Too many memory values.");
-        require(memoryPairs.length % 2 == 0, "Size of memoryPairs must be even.");
-        require(z < prime, "Invalid value of z.");
-        require(alpha < prime, "Invalid value of alpha.");
-        (factHash, memoryHash, prod) = computeFactHash(memoryPairs, z, alpha, prime);
-        emit LogMemoryPageFactRegular(factHash, memoryHash, prod);
+    function registerRegularMemoryPage(uint256[] calldata memoryPairs,uint256 z,uint256 alpha,uint256 prime) external returns (bytes32 factHash, uint256 memoryHash, uint256 prod) {
+      require(memoryPairs.length < 2**20, "Too many memory values.");
+      require(memoryPairs.length % 2 == 0, "Size of memoryPairs must be even.");
+      require(z < prime, "Invalid value of z.");
+      require(alpha < prime, "Invalid value of alpha.");
 
-        registerFact(factHash);
+      (factHash, memoryHash, prod) = computeFactHash(memoryPairs, z, alpha, prime);
+
+      emit LogMemoryPageFactRegular(factHash, memoryHash, prod);
+
+      registerFact(factHash);
     }
 
-    function computeFactHash(
-        uint256[] memory memoryPairs,
-        uint256 z,
-        uint256 alpha,
-        uint256 prime
-    )
-        internal
-        pure
-        returns (
-            bytes32 factHash,
-            uint256 memoryHash,
-            uint256 prod
-        )
-    {
-        uint256 memorySize = memoryPairs.length / 2; // NOLINT: divide-before-multiply.
+    function computeFactHash(uint256[] memory memoryPairs, uint256 z, uint256 alpha, uint256 prime) internal pure returns (bytes32 factHash, uint256 memoryHash, uint256 prod) {
+      uint256 memorySize = memoryPairs.length / 2; // NOLINT: divide-before-multiply.
 
-        prod = 1;
+      prod = 1;
 
-        assembly {
-            let memoryPtr := add(memoryPairs, 0x20)
+      assembly {
+        let memoryPtr := add(memoryPairs, 0x20)
 
-            // Each value of memoryPairs is a pair: (address, value).
-            let lastPtr := add(memoryPtr, mul(memorySize, 0x40))
-            for {
-                let ptr := memoryPtr
-            } lt(ptr, lastPtr) {
-                ptr := add(ptr, 0x40)
-            } {
-                // Compute address + alpha * value.
-                let address_value_lin_comb := addmod(
-                    // address=
-                    mload(ptr),
-                    mulmod(
-                        // value=
-                        mload(add(ptr, 0x20)),
-                        alpha,
-                        prime
-                    ),
-                    prime
-                )
-                prod := mulmod(prod, add(z, sub(prime, address_value_lin_comb)), prime)
-            }
-
-            memoryHash := keccak256(
-                memoryPtr,
-                mul(
-                    // 0x20 * 2.
-                    0x40,
-                    memorySize
-                )
-            )
+        // Each value of memoryPairs is a pair: (address, value).
+        let lastPtr := add(memoryPtr, mul(memorySize, 0x40))
+        for { let ptr := memoryPtr } lt(ptr, lastPtr) { ptr := add(ptr, 0x40) } {
+          // Compute address + alpha * value.
+          let address_value_lin_comb := addmod(mload(ptr), mulmod(mload(add(ptr, 0x20)), alpha, prime), prime)
+          prod := mulmod(prod, add(z, sub(prime, address_value_lin_comb)), prime)
         }
 
-        factHash = keccak256(
-            abi.encodePacked(
-                REGULAR_PAGE,
-                prime,
-                memorySize,
-                z,
-                alpha,
-                prod,
-                memoryHash,
-                uint256(0)
-            )
-        );
+        memoryHash := keccak256(memoryPtr, mul(0x40, memorySize))
+      }
+
+      factHash = keccak256(abi.encodePacked(REGULAR_PAGE, prime, memorySize, z, alpha, prod, memoryHash, uint256(0)));
     }
 
     /*

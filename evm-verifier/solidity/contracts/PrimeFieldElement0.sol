@@ -15,17 +15,13 @@ contract PrimeFieldElement0 {
     uint256 internal constant GEN1024_VAL =
         0x659d83946a03edd72406af6711825f5653d9e35dc125289a206c054ec89c4f1;
 
-    function fromMontgomery(uint256 val) internal pure returns (uint256 res) {
-        // uint256 res = fmul(val, kMontgomeryRInv);
-        assembly {
-            res := mulmod(
-                val,
-                0x40000000000001100000000000012100000000000000000000000000000000,
-                0x800000000000011000000000000000000000000000000000000000000000001
-            )
-        }
-        return res;
+  function fromMontgomery(uint256 val) internal pure returns (uint256 res) {
+    // 몽고메리 모듈러 곱셈 ..^_^;;
+    assembly {
+      res := mulmod(val, 0x40000000000001100000000000012100000000000000000000000000000000, 0x800000000000011000000000000000000000000000000000000000000000001)
     }
+    return res;
+  }
 
     function fromMontgomeryBytes(bytes32 bs) internal pure returns (uint256) {
         // Assuming bs is a 256bit bytes object, in Montgomery form, it is read into a field
